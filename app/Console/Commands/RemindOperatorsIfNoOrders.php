@@ -16,6 +16,7 @@ class RemindOperatorsIfNoOrders extends Command
      *
      * @var string
      */
+
     protected $signature = 'orders:remind-operators';
 
     /**
@@ -23,20 +24,19 @@ class RemindOperatorsIfNoOrders extends Command
      *
      * @var string
      */
+
     protected $description = 'Send reminder to operators at 02:00 if no orders were created yesterday';
 
     /**
      * Execute the console command.
      */
+
     public function handle()
     {
         $yesterday = Carbon::yesterday()->toDateString();
-
         $ordersCount = Order::whereDate('created_at', $yesterday)->count();
-
         if ($ordersCount == 0 && Order::count() > 0) {
-            $operators = User::whereHas('roles', fn ($q) => $q->where('name', 'operator'))->get();
-
+            $operators = User::whereHas('roles', fn($q) => $q->where('name', 'operator'))->get();
             if ($operators->isNotEmpty()) {
                 Notification::send($operators, new NoOrdersYesterdayNotification($yesterday));
                 $this->info("Reminder sent to operators: No orders found for {$yesterday}.");
@@ -46,7 +46,6 @@ class RemindOperatorsIfNoOrders extends Command
         } else {
             $this->info("Orders found for {$yesterday}, no reminder sent.");
         }
-
         return 0;
     }
 }
