@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Crypt;
 
 
 Route::get('/', function (Request $request) {
@@ -21,5 +20,4 @@ Route::get('/language/{locale}', function ($locale) {
     }
     return redirect()->back();
 })->name('language.switch');
-
 

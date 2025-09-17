@@ -31,8 +31,7 @@ class MarkOldShippedOrdersDelayed extends Command
             $order->update(['status' => 'delayed']);
 
             // notify roles
-            $users = User::whereIn('role', ['fornissure', 'operator', 'admin'])->get();
-
+            $users = User::whereHas('roles', fn($q) => $q->whereIn('name', ['fornissure', 'operator', 'admin']))->get();
             Notification::send($users, new OrderDelayedNotification($order));
 
             $this->info("Order #{$order->id} marked as delayed and notifications sent.");

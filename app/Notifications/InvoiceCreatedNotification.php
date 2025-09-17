@@ -6,8 +6,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use App\Models\FornissureInvoice;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class InvoiceCreatedNotification extends Notification
+class InvoiceCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -44,4 +45,3 @@ class InvoiceCreatedNotification extends Notification
         ];
     }
 }
-

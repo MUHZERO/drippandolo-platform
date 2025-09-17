@@ -6,8 +6,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use Carbon\Carbon;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class MissingRevenueNotification extends Notification
+class MissingRevenueNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -38,4 +39,3 @@ class MissingRevenueNotification extends Notification
         ];
     }
 }
-

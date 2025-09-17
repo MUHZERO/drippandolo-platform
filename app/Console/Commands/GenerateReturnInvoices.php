@@ -26,7 +26,7 @@ class GenerateReturnInvoices extends Command
 
         foreach ($fornissures as $fornissure) {
             $orders = Order::where('fornissure_id', $fornissure->id)
-                ->whereIn('status', ['delayed', 'cancelled'])
+                ->whereIn('status', ['delayed', 'canceled'])
                 ->whereNotNull('confirmation_price_id')
                 ->whereBetween('created_at', [$start, $end])
                 ->whereDoesntHave('invoices')
@@ -37,7 +37,7 @@ class GenerateReturnInvoices extends Command
                 continue;
             }
 
-            $amount = $orders->sum(fn($order) => optional($order->confirmationPrice)->amount ?? 0);
+            $amount = $orders->sum(fn($order) => optional($order->confirmationPrice)->price ?? 0);
 
             $invoice = FornissureInvoice::create([
                 'fornissure_id' => $fornissure->id,

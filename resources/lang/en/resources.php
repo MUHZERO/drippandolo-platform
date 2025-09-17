@@ -37,11 +37,15 @@ return [
         'customer_name' => 'Customer Name',
         'customer_phone' => 'Customer Phone',
         'customer_address' => 'Customer Address',
+        'customer' => 'Customer',
         'product_name' => 'Product Name',
         'product_image' => 'Product Image',
+        'size' => 'Size',
         'operator' => 'Operator',
         'fornissure' => 'Fornissure',
         'confirmation_price' => 'Confirmation Price',
+        'tracking_number' => 'Tracking Number',
+        'shopify_order_id' => 'Shopify Order ID',
         'user' => 'User',
         'action' => 'Action',
         'changes' => 'Changes',
@@ -69,6 +73,10 @@ return [
         'weekend_not_allowed' => 'Weekends are not allowed',
         'missing_previous'    => 'You must first enter revenue for :date',
 
+    ],
+
+    'tooltips' => [
+        'missing_tracking_over_3_days' => 'Tracking number missing for over 3 days',
     ],
 
     'statuses' => [
@@ -141,6 +149,9 @@ return [
             'customer_address'    => 'Customer Address',
             'price'               => 'Price',
             'status'              => 'Status',
+            'tracking_number'     => 'Tracking Number',
+            'shopify_order_id'    => 'Shopify Order ID',
+            'size'                => 'Size',
             'notes'               => 'Notes',
             'confirmation_price_id' => 'Confirmation Price',
             'confirmed_price'     => 'Confirmed Price',
@@ -152,6 +163,28 @@ return [
             'created' => 'Created',
             'updated' => 'Updated',
             'deleted' => 'Deleted',
+        ],
+    ],
+
+    'webhooks' => [
+        'docs' => [
+            'title' => 'Chatbot Webhook',
+            'intro' => 'Search orders by name, phone, or Shopify ID via a secure webhook.',
+            'endpoint' => 'Endpoint',
+            'method' => 'Method',
+            'auth' => 'Authentication',
+            'auth_desc' => 'Send header X-Webhook-Token with the value of CHATBOT_WEBHOOK_TOKEN from your environment.',
+            'token_placeholder' => 'CHATBOT_WEBHOOK_TOKEN',
+            'fields' => 'Request fields',
+            'field_query' => 'Optional. Searches name, normalized phone, or Shopify ID (partial).',
+            'field_name' => 'Optional. Partial match on customer name.',
+            'field_phone' => 'Optional. Digits are normalized, partial match supported.',
+            'field_shopify_id' => 'Optional. Exact match when provided explicitly.',
+            'field_limit' => 'Optional. Default 10, maximum 50.',
+            'examples' => 'Examples',
+            'example_query_title' => 'Single query example',
+            'example_fields_title' => 'Explicit fields example',
+            'example_response_title' => 'Response example',
         ],
     ],
 

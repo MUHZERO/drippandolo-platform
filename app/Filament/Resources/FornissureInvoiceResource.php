@@ -29,14 +29,18 @@ class FornissureInvoiceResource extends Resource
     public static function canEdit($record): bool
     {
         $user = auth()->user();
-
-        // If invoice is return type and user is admin → block edit
-        if ($record->type === 'return' && $user->hasRole('admin')) {
+        if (! $user) {
             return false;
         }
 
-        if ($record->type === 'payment' && $user->hasRole('fornissure')) {
-            return false;
+        if ($user->hasRole('admin')) {
+            // Admins can edit only non-return invoices
+            return $record->type !== 'return';
+        }
+
+        if ($user->hasRole('fornissure')) {
+            // Fornissure can edit return invoices they own
+            return $record->type === 'return' && $record->fornissure_id === $user->id;
         }
 
         return false;
@@ -64,7 +68,7 @@ class FornissureInvoiceResource extends Resource
             Forms\Components\Select::make('type')
                 ->label(__('resources.fields.type_invoice'))
                 ->options([
-                    'payment' => 'Payment (every 3 days)',
+                    'payment' => 'Payment (every Wednesday)',
                     'return'  => 'Return (every 20 days)',
                 ])
                 ->disabled()
@@ -108,7 +112,7 @@ class FornissureInvoiceResource extends Resource
                 ->label(__('resources.fields.fornissure'))
                 ->sortable()
                 ->searchable()
-                ->visible(auth()->user()->hasRole('admin')),
+                ->visible(fn() => auth()->user()?->hasRole('admin') ?? false),
 
             Tables\Columns\TextColumn::make('type')
                 ->label(__('resources.fields.type_invoice'))
@@ -116,8 +120,8 @@ class FornissureInvoiceResource extends Resource
                 ->formatStateUsing(fn($state) => __("resources.invoice_types.$state"))
                 ->badge()
                 ->colors([
-                    'danger' => __('resources.invoice_types.return'),
-                    'success' => __('resources.invoice_types.payment'),
+                    'danger' => 'return',
+                    'success' => 'payment',
                 ]),
             Tables\Columns\TextColumn::make('period_start')
                 ->label(__('resources.fields.period_start'))
@@ -137,8 +141,8 @@ class FornissureInvoiceResource extends Resource
                 ->formatStateUsing(fn($state) => __("resources.statuses.$state"))
                 ->badge()
                 ->colors([
-                    'danger' => __('resources.statuses.not_paid'),
-                    'success' => __('resources.statuses.paid'),
+                    'danger' => 'not_paid',
+                    'success' => 'paid',
                 ]),
             Tables\Columns\ImageColumn::make('transaction_image')
                 ->label(__('resources.fields.transaction_image'))
@@ -161,7 +165,7 @@ class FornissureInvoiceResource extends Resource
                 Tables\Filters\SelectFilter::make('type')
                     ->label(__('resources.fields.type_invoice'))
                     ->options([
-                        'payment' => 'Payment (every 3 days)',
+                        'payment' => 'Payment (every Wednesday)',
                         'return'  => 'Return (every 20 days)',
                     ]),
                 Tables\Filters\Filter::make('created_at')

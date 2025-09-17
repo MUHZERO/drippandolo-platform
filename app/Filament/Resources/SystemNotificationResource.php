@@ -123,7 +123,7 @@ class SystemNotificationResource extends Resource
                             'OrderCreatedNotification',
                             'OrderNeedsConfirmationNotification'
                             => isset($record->data['order_id'])
-                                ? route('filament.admin.resources.orders.edit', $record->data['order_id'])
+                                ? route('filament.admin.resources.orders.index', ['order_id' => $record->data['order_id']])
                                 : null,
 
                             'DailyOrdersSummaryNotification'
@@ -143,7 +143,10 @@ class SystemNotificationResource extends Resource
                             return $livewire->redirect($url, navigate: true);
                         }
 
-                        $livewire->notify('warning', 'This notification has no destination.');
+                        \Filament\Notifications\Notification::make()
+                            ->title('This notification has no destination.')
+                            ->warning()
+                            ->send();
                     }),
             ])
             ->defaultSort('created_at', 'desc');

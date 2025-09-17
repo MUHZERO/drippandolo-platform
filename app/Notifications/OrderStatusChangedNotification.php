@@ -5,8 +5,9 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class OrderStatusChangedNotification extends Notification
+class OrderStatusChangedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -26,7 +27,10 @@ class OrderStatusChangedNotification extends Notification
                 'old' => $this->oldStatus,
                 'new' => $this->newStatus,
             ], 'it'))
-            ->action(__('notifications.order_status_changed.action', [], 'it'), url("/orders/{$this->order->id}"));
+            ->action(
+                __('notifications.order_status_changed.action', [], 'it'),
+                route('filament.admin.resources.orders.index', ['order_id' => $this->order->id])
+            );
     }
 
     public function toDatabase($notifiable): array
@@ -42,4 +46,3 @@ class OrderStatusChangedNotification extends Notification
         ];
     }
 }
-

@@ -6,8 +6,9 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Notification;
 use Illuminate\Notifications\Messages\MailMessage;
 use App\Models\Order;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class OrderNeedsConfirmationNotification extends Notification
+class OrderNeedsConfirmationNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -50,7 +51,9 @@ class OrderNeedsConfirmationNotification extends Notification
         return (new MailMessage)
             ->subject(__('notifications.needs_confirmation.subject', ['order' => $this->order->id]))
             ->line(__('notifications.needs_confirmation.line', ['order' => $this->order->id]))
-            ->action(__('notifications.needs_confirmation.action'), url("/orders/{$this->order->id}"));
+            ->action(
+                __('notifications.needs_confirmation.action'),
+                route('filament.admin.resources.orders.index', ['order_id' => $this->order->id])
+            );
     }
 }
-

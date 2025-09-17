@@ -4,8 +4,9 @@ namespace App\Providers;
 
 use Filament\View\PanelsRenderHook;
 use Filament\Support\Facades\FilamentView;
-
 use Illuminate\Support\ServiceProvider;
+use App\Models\FornissureInvoice;
+use App\Observers\FornissureInvoiceObserver;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,5 +32,6 @@ class AppServiceProvider extends ServiceProvider
 
         // Register Observer
         \App\Models\Order::observe(\App\Observers\OrderObserver::class);
+        FornissureInvoice::observe(FornissureInvoiceObserver::class);
     }
 }

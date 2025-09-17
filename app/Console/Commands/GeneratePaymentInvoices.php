@@ -14,11 +14,11 @@ use Illuminate\Support\Str;
 class GeneratePaymentInvoices extends Command
 {
     protected $signature = 'invoices:generate-payment';
-    protected $description = 'Generate payment invoices for fornissures every 3 days';
+    protected $description = 'Generate weekly payment invoices for fornissures (every Wednesday)';
 
     public function handle(): int
     {
-        $start = Carbon::now()->subDays(3)->startOfDay();
+        $start = Carbon::now()->subDays(7)->startOfDay();
         $end   = Carbon::now()->endOfDay();
 
         // get all fornissures who have confirmed orders in this period
@@ -38,7 +38,7 @@ class GeneratePaymentInvoices extends Command
                 continue;
             }
 
-            $amount = $orders->sum(fn($order) => optional($order->confirmationPrice)->amount ?? 0);
+            $amount = $orders->sum(fn($order) => optional($order->confirmationPrice)->price ?? 0);
 
             $invoice = FornissureInvoice::create([
                 'fornissure_id' => $fornissure->id,

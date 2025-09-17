@@ -27,7 +27,15 @@ class OrderResource extends Resource
     {
         $user = auth()->user();
 
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            // Show orders without tracking number first, then by newest created.
+            ->orderByRaw('tracking_number IS NULL DESC')
+            ->orderBy('created_at', 'desc');
+
+        // If an order_id is provided (e.g., from notifications), filter to it
+        if (request()->filled('order_id')) {
+            $query->where('id', request()->get('order_id'));
+        }
 
         if (! $user) {
             return $query->whereRaw('1 = 0'); // no results if no user
@@ -47,6 +55,20 @@ class OrderResource extends Resource
 
         return $query->whereRaw('1 = 0'); // default deny
     }
+
+    public static function canEdit($record): bool
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return false;
+        }
+        // Fornissure cannot open the edit page; they have inline editing only
+        if ($user->hasRole('fornissure')) {
+            return false;
+        }
+        // Admins and operators can edit
+        return $user->hasRole('admin') || $user->hasRole('operator');
+    }
     public static function form(Form $form): Form
     {
         $user = auth()->user();
@@ -62,6 +84,11 @@ class OrderResource extends Resource
                     ->label(__('resources.fields.product_image'))
                     ->image()
                     ->directory('orders/images')
+                    ->disabled(fn($record) => $user->hasRole('fornissure')),
+
+                Forms\Components\TextInput::make('size')
+                    ->label(__('resources.fields.size'))
+                    ->maxLength(100)
                     ->disabled(fn($record) => $user->hasRole('fornissure')),
 
 
@@ -90,6 +117,11 @@ class OrderResource extends Resource
                     ->prefix('€')
                     ->disabled(fn($record) => $user->hasRole('fornissure')),
 
+                Forms\Components\TextInput::make('tracking_number')
+                    ->label(__('resources.fields.tracking_number'))
+                    ->maxLength(191)
+                    ->disabled(fn($record) => $user->hasRole('fornissure')),
+
                 Forms\Components\Select::make('status')
                     ->label(__('resources.fields.status'))
                     ->options([
@@ -104,9 +136,8 @@ class OrderResource extends Resource
 
                 Forms\Components\Select::make('confirmation_price_id')
                     ->label(__('resources.fields.confirmation_price'))
-                    ->relationship('confirmationPrice', 'name')
+                    ->options(fn() => \App\Models\ConfirmationPrice::query()->orderBy('name')->pluck('name', 'id')->toArray())
                     ->searchable()
-                    ->preload()
                     ->prefix('€')
                     ->hidden(fn() => $user->hasRole('operator'))
                     ->disabled(function ($record) use ($user) {
@@ -131,6 +162,11 @@ class OrderResource extends Resource
                     ->columnSpanFull()
                     ->disabled(fn($record) => $user->hasRole('fornissure')),
 
+                Forms\Components\TextInput::make('shopify_order_id')
+                    ->label(__('resources.fields.shopify_order_id'))
+                    ->maxLength(191)
+                    ->disabled(fn($record) => $user->hasRole('fornissure')),
+
             ]);
     }
 
@@ -138,39 +174,93 @@ class OrderResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')->sortable(),
-
-                Tables\Columns\TextColumn::make('product_name')
-                    ->label(__('resources.fields.product_name'))
-                    ->searchable()
+                // Alert icon for missing tracking > 3 days (fornissure only)
+                Tables\Columns\IconColumn::make('missing_tracking_alert')
+                    ->icon('heroicon-o-exclamation-triangle')
+                    ->color('danger')
+                    ->tooltip(fn() => __('resources.tooltips.missing_tracking_over_3_days'))
+                    ->visible(function ($record) {
+                        $user = auth()->user();
+                        return  $record
+                            && empty($record->tracking_number)
+                            && optional($record?->created_at)->lt(now()->subDays(3));
+                    }),
+                Tables\Columns\TextColumn::make('shopify_order_id')
+                    ->label(__('resources.fields.id'))
                     ->sortable(),
 
-                Tables\Columns\ImageColumn::make('product_image')
-                    ->label(__('resources.fields.product_image'))
-                    ->circular(),
+                // Combined product image + name
+                Tables\Columns\ViewColumn::make('product')
+                    ->label(__('resources.fields.product_name'))
+                    ->view('filament.tables.columns.order-product')
+                    ->sortable(query: fn($query, $direction) => $query->orderBy('product_name', $direction))
+                    ->searchable(query: function ($query, $search) {
+                        $query->where('product_name', 'like', "%{$search}%");
+                    }),
 
-                Tables\Columns\TextColumn::make('customer_name')
-                    ->label(__('resources.fields.customer_name'))
-                    ->searchable()
+                Tables\Columns\TextColumn::make('size')
+                    ->label(__('resources.fields.size'))
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('customer_phone')
-                    ->label(__('resources.fields.customer_phone'))
-                    ->searchable()
-                    ->toggleable(),
+                // Combined customer name + phone
+                Tables\Columns\ViewColumn::make('customer')
+                    ->label(__('resources.fields.customer'))
+                    ->view('filament.tables.columns.order-customer')
+                    ->searchable(query: function ($query, $search) {
+                        $query->where(function ($q) use ($search) {
+                            $q->where('customer_name', 'like', "%{$search}%")
+                                ->orWhere('customer_phone', 'like', "%{$search}%");
+                        });
+                    }),
 
                 Tables\Columns\TextColumn::make('price')
                     ->label(__('resources.fields.price'))
                     ->money('eur')
+                    ->toggleable(isToggledHiddenByDefault: true)
                     ->sortable(),
 
+                // tracking_number: inline editable for fornissure, read-only otherwise
+                Tables\Columns\TextInputColumn::make('tracking_number')
+                    ->label(__('resources.fields.tracking_number'))
+                    ->disabled(fn() => ! (auth()->user()?->hasRole('fornissure') ?? false))
+                    ->rules(['nullable', 'string', 'max:191'])
+                    ->placeholder('')
+                    ->extraInputAttributes(function ($record) {
+                        $shouldAlert = $record
+                            && empty($record->tracking_number)
+                            && optional($record?->created_at)->lt(now()->subDays(3));
+
+                        return [
+                            'autocomplete' => 'off',
+                            'class' => $shouldAlert ? 'order-alert-input' : null,
+                            'title' => $shouldAlert ? 'Tracking number missing for over 3 days' : null,
+                        ];
+                    })
+                    // Cell styling now handled at full-row level
+                    ->sortable(),
+
+
+                // status: inline editable for fornissure
+                Tables\Columns\SelectColumn::make('status')
+                    ->label(__('resources.fields.status'))
+                    ->options([
+                        'shipped'   => __('resources.statuses.shipped'),
+                        'delivered' => __('resources.statuses.delivered'),
+                        'delayed'   => __('resources.statuses.delayed'),
+                        'canceled'  => __('resources.statuses.canceled'),
+                    ])
+                    ->disabled(fn() => ! (auth()->user()?->hasRole('fornissure') ?? false))
+                    ->visible(fn() => auth()->user()?->hasRole('fornissure') ?? false)
+
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('status')
                     ->badge()
                     ->colors([
-                        'success' => __('resources.statuses.delivered'),
-                        'warning' => __('resources.statuses.shipped'),
-                        'danger'  => [__('resources.statuses.canceled'), __('resources.statuses.delayed')],
+                        'success' => 'delivered',
+                        'warning' => 'shipped',
+                        'danger'  => ['canceled', 'delayed'],
                     ])
+                    ->visible(fn() => ! (auth()->user()?->hasRole('fornissure') ?? false))
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('operator.name')
@@ -185,6 +275,15 @@ class OrderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->visible(fn() => auth()->user()?->hasRole('admin')),
 
+                Tables\Columns\SelectColumn::make('confirmation_price_id')
+                    ->label(__('resources.fields.confirmation_price'))
+                    ->options(fn() => \App\Models\ConfirmationPrice::query()->orderBy('name')->pluck('name', 'id')->toArray())
+                    ->searchable()
+                    ->visible(fn() => auth()->user()?->hasRole('fornissure') ?? false),
+                Tables\Columns\TextColumn::make('confirmationPrice.name')
+                    ->label(__('resources.fields.confirmation_price'))
+                    ->visible(fn() => ! (auth()->user()?->hasRole('fornissure') ?? false)),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->label(__('resources.fields.created_at'))
                     ->dateTime()
@@ -193,6 +292,24 @@ class OrderResource extends Resource
                     ->visible(fn() => auth()->user()?->hasRole('admin')),
 
             ])
+            ->recordClasses(function ($record) {
+                $classes = [];
+                $user = auth()->user();
+
+                if (is_null($record->confirmation_price_id)) {
+                    $classes[] = 'bg-red-50';
+                }
+
+                // For fornissure: full-row alert when tracking is missing for > 3 days.
+                if (($user?->hasRole('fornissure') ?? false)
+                    && empty($record->tracking_number)
+                    && optional($record->created_at)->lt(now()->subDays(3))
+                ) {
+                    $classes[] = 'order-alert-row';
+                }
+
+                return implode(' ', $classes);
+            })
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
                     ->label(__('resources.fields.status'))
@@ -219,7 +336,7 @@ class OrderResource extends Resource
             ])
             ->actions([
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()->visible(fn() => auth()->user()?->hasRole('admin') || auth()->user()?->hasRole('operator')),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

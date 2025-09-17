@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'chatbot' => [
+        // Set CHATBOT_WEBHOOK_TOKEN in your environment to secure the webhook
+        'webhook_token' => env('CHATBOT_WEBHOOK_TOKEN'),
+    ],
+
 ];

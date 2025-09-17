@@ -37,7 +37,9 @@ class OrderDelayedNotification extends Notification implements ShouldQueue
         return (new MailMessage)
             ->subject(__('notifications.order_delayed.subject', ['id' => $this->order->id], 'it'))
             ->line(__('notifications.order_delayed.body', ['id' => $this->order->id], 'it'))
-            ->action(__('notifications.order_delayed.action', [], 'it'), url("/orders/{$this->order->id}"));
+            ->action(
+                __('notifications.order_delayed.action', [], 'it'),
+                route('filament.admin.resources.orders.index', ['order_id' => $this->order->id])
+            );
     }
 }
-

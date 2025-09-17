@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\FornissureInvoiceResource\Pages;
 
 use App\Filament\Resources\FornissureInvoiceResource;
-use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListFornissureInvoices extends ListRecords

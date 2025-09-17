@@ -5,8 +5,9 @@ namespace App\Notifications;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 
-class OrderCreatedNotification extends Notification
+class OrderCreatedNotification extends Notification implements ShouldQueue
 {
     use Queueable;
 
@@ -22,7 +23,10 @@ class OrderCreatedNotification extends Notification
         return (new MailMessage)
             ->subject(__('notifications.order_created.subject', [], 'it')) // Force Italian
             ->line(__('notifications.order_created.body', ['id' => $this->order->id], 'it'))
-            ->action(__('notifications.order_created.action', [], 'it'), url("/orders/{$this->order->id}"));
+            ->action(
+                __('notifications.order_created.action', [], 'it'),
+                route('filament.admin.resources.orders.index', ['order_id' => $this->order->id])
+            );
     }
 
     public function toDatabase($notifiable): array
@@ -34,4 +38,3 @@ class OrderCreatedNotification extends Notification
         ];
     }
 }
-

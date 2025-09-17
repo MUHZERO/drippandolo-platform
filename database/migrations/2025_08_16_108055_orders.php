@@ -14,6 +14,9 @@ return new class extends Migration
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
             $table->string('product_name');
+            $table->string('size');
+            $table->string('shopify_order_id')->unique();
+            $table->string('tracking_number')->nullable()->unique();
             $table->string('product_image')->nullable();
             $table->string('customer_name');
             $table->string('customer_phone');
@@ -32,6 +35,11 @@ return new class extends Migration
             $table->foreignId('fornissure_id')->nullable()->constrained('users');
             $table->timestamp('notified_at')->nullable(); // for tracking notifications
             $table->timestamps();
+
+            $table->index('status');
+            $table->index('fornissure_id');
+            $table->index('operator_id');
+            $table->index('confirmation_price_id');
         });
 
     }

@@ -3,18 +3,20 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Symfony\Component\HtmlSanitizer\Reference\W3CReference;
 
 class Order extends Model
 {
     protected $fillable = [
         'product_name',
         'product_image',
+        'size',
         'customer_name',
         'customer_phone',
         'customer_address',
         'price',
         'status',
+        'tracking_number',
+        'shopify_order_id',
         'notes',
         'confirmation_price_id',
         'confirmed_price',
