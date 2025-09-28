@@ -9,6 +9,16 @@ use App\Notifications\OrderStatusChangedNotification;
 
 class OrderObserver
 {
+    public function updating(Order $order): void
+    {
+        if (auth()->check() && auth()->user()->hasRole('fornissure')) {
+            if ($order->isDirty('confirmation_price_id') && filled($order->getOriginal('confirmation_price_id'))) {
+                // keep the original confirmation price; fornissure can only set it once
+                $order->confirmation_price_id = $order->getOriginal('confirmation_price_id');
+            }
+        }
+    }
+
     public function created(Order $order): void
     {
         // Notify fornissure when a new order is created

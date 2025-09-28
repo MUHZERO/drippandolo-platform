@@ -20,6 +20,7 @@ class CreateOrder extends CreateRecord
             $data['operator_id']   = $user->id;
             $data['fornissure_id'] = User::whereHas('roles', fn($q) => $q->where('name', 'fornissure'))->value('id');
             unset($data['confirmation_price_id']); // ensure operator never sets it
+            unset($data['tracking_number']);
         }
 
         if ($user->hasRole('fornissure')) {

@@ -76,7 +76,7 @@ return [
     ],
 
     'tooltips' => [
-        'missing_tracking_over_3_days' => 'Tracking number missing for over 3 days',
+        'missing_tracking' => 'Tracking number missing',
     ],
 
     'statuses' => [
@@ -107,6 +107,10 @@ return [
         'orders' => [
             'plural' => 'Orders',
             'singular' => 'Order',
+        ],
+        'orders_confirmed' => [
+            'plural' => 'Confirmed Orders',
+            'singular' => 'Confirmed Order',
         ],
         'spends' => [
             'plural' => 'Spends',

@@ -8,6 +8,7 @@ use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Navigation\NavigationItem;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -84,6 +85,7 @@ class OrderResource extends Resource
                     ->label(__('resources.fields.product_image'))
                     ->image()
                     ->directory('orders/images')
+                    ->required()
                     ->disabled(fn($record) => $user->hasRole('fornissure')),
 
                 Forms\Components\TextInput::make('size')
@@ -120,6 +122,7 @@ class OrderResource extends Resource
                 Forms\Components\TextInput::make('tracking_number')
                     ->label(__('resources.fields.tracking_number'))
                     ->maxLength(191)
+                    ->hidden(fn() => $user->hasRole('operator'))
                     ->disabled(fn($record) => $user->hasRole('fornissure')),
 
                 Forms\Components\Select::make('status')
@@ -174,16 +177,15 @@ class OrderResource extends Resource
     {
         return $table
             ->columns([
-                // Alert icon for missing tracking > 3 days (fornissure only)
+                // Alert icon for missing tracking
                 Tables\Columns\IconColumn::make('missing_tracking_alert')
                     ->icon('heroicon-o-exclamation-triangle')
                     ->color('danger')
-                    ->tooltip(fn() => __('resources.tooltips.missing_tracking_over_3_days'))
+                    ->tooltip(fn() => __('resources.tooltips.missing_tracking'))
                     ->visible(function ($record) {
                         $user = auth()->user();
-                        return  $record
-                            && empty($record->tracking_number)
-                            && optional($record?->created_at)->lt(now()->subDays(3));
+                        return $record
+                            && empty($record->tracking_number);
                     }),
                 Tables\Columns\TextColumn::make('shopify_order_id')
                     ->label(__('resources.fields.id'))
@@ -227,13 +229,12 @@ class OrderResource extends Resource
                     ->placeholder('')
                     ->extraInputAttributes(function ($record) {
                         $shouldAlert = $record
-                            && empty($record->tracking_number)
-                            && optional($record?->created_at)->lt(now()->subDays(3));
+                            && empty($record->tracking_number);
 
                         return [
                             'autocomplete' => 'off',
                             'class' => $shouldAlert ? 'order-alert-input' : null,
-                            'title' => $shouldAlert ? 'Tracking number missing for over 3 days' : null,
+                            'title' => $shouldAlert ? __('resources.tooltips.missing_tracking') : null,
                         ];
                     })
                     // Cell styling now handled at full-row level
@@ -279,6 +280,7 @@ class OrderResource extends Resource
                     ->label(__('resources.fields.confirmation_price'))
                     ->options(fn() => \App\Models\ConfirmationPrice::query()->orderBy('name')->pluck('name', 'id')->toArray())
                     ->searchable()
+                    ->disabled(fn($record) => filled($record->confirmation_price_id))
                     ->visible(fn() => auth()->user()?->hasRole('fornissure') ?? false),
                 Tables\Columns\TextColumn::make('confirmationPrice.name')
                     ->label(__('resources.fields.confirmation_price'))
@@ -300,11 +302,8 @@ class OrderResource extends Resource
                     $classes[] = 'bg-red-50';
                 }
 
-                // For fornissure: full-row alert when tracking is missing for > 3 days.
-                if (($user?->hasRole('fornissure') ?? false)
-                    && empty($record->tracking_number)
-                    && optional($record->created_at)->lt(now()->subDays(3))
-                ) {
+                // Highlight rows missing a tracking number.
+                if (empty($record->tracking_number)) {
                     $classes[] = 'order-alert-row';
                 }
 
@@ -375,7 +374,21 @@ class OrderResource extends Resource
             'index' => Pages\ListOrders::route('/'),
             'create' => Pages\CreateOrder::route('/create'),
             'edit' => Pages\EditOrder::route('/{record}/edit'),
+            'confirmed' => Pages\ConfirmedOrders::route('/confirmed'),
         ];
+    }
+
+    public static function getNavigationItems(): array
+    {
+        $items = parent::getNavigationItems();
+
+        $items[] = NavigationItem::make(__('resources.pages.orders_confirmed.plural'))
+            ->url(static::getUrl('confirmed'))
+            ->icon('heroicon-o-check-circle')
+            ->group(static::getNavigationGroup())
+            ->visible(fn() => static::canViewAny());
+
+        return $items;
     }
 
     public static function getModelLabel(): string

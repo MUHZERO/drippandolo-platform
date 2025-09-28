@@ -17,15 +17,15 @@ class EditOrder extends EditRecord
 
         if ($user->hasRole('operator')) {
             unset($data['confirmation_price_id']);
+            unset($data['tracking_number']);
         }
 
         if ($user->hasRole('fornissure')) {
-            // allow only status + confirmation_price_id
-            $allowed = ['status', 'confirmation_price_id'];
+            // allow only status; confirmation_price editable only if never set and no invoices
+            $allowed = ['status'];
 
-            // if order already invoiced, remove confirmation_price_id
-            if ($record->invoices()->exists()) {
-                $allowed = ['status'];
+            if (! $record->invoices()->exists() && blank($record->confirmation_price_id)) {
+                $allowed[] = 'confirmation_price_id';
             }
 
             $data = array_intersect_key($data, array_flip($allowed));

@@ -75,7 +75,7 @@ return [
     ],
 
     'tooltips' => [
-        'missing_tracking_over_3_days' => 'Numero di tracking mancante da oltre 3 giorni',
+        'missing_tracking' => 'Numero di tracking mancante',
     ],
     'statuses' => [
         'shipped'   => 'Spedito',
@@ -103,6 +103,10 @@ return [
         'dashboards' => [
             'plural' => 'Dashboard',
             'singular' => 'Dashboard',
+        ],
+        'orders_confirmed' => [
+            'plural' => 'Ordini Confermati',
+            'singular' => 'Ordine Confermato',
         ],
         'orders' => [
             'plural' => 'Ordini',
