@@ -32,4 +32,4 @@ Schedule::command('invoices:generate-return')
     ->cron('0 2 */20 * *'); // every 20 days at 02:00
 
 Schedule::command('invoices:generate-payment')
-    ->weeklyOn(3, '03:00'); // every Wednesday at 03:00
+    ->dailyAt('03:00'); // every Wednesday at 03:00
