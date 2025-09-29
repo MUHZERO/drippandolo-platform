@@ -7,7 +7,6 @@ use App\Models\FornissureInvoice;
 use App\Models\Order;
 use App\Models\User;
 use App\Notifications\InvoiceCreatedNotification;
-use Carbon\Carbon;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 
@@ -18,8 +17,6 @@ class GeneratePaymentInvoices extends Command
 
     public function handle(): int
     {
-        $start = Carbon::now()->subDays(7)->startOfDay();
-        $end   = Carbon::now()->endOfDay();
 
         // get all fornissures who have confirmed orders in this period
         $fornissures = User::whereHas('roles', function ($query) {
@@ -29,31 +26,34 @@ class GeneratePaymentInvoices extends Command
         foreach ($fornissures as $fornissure) {
             $orders = Order::where('fornissure_id', $fornissure->id)
                 ->whereNotNull('confirmation_price_id')
-                ->whereBetween('created_at', [$start, $end])
                 ->whereDoesntHave('invoices')
+                ->whereNotNull('tracking_number')
+                ->where('tracking_number', '!=', '')
                 ->with('confirmationPrice')
+                ->orderBy('created_at')
                 ->get();
 
-            if ($orders->isEmpty()) {
-                continue;
-            }
+            $orders->chunk(50)->each(function ($batch) use ($fornissure) {
+                if ($batch->count() < 50) {
+                    return;
+                }
 
-            $amount = $orders->sum(fn($order) => optional($order->confirmationPrice)->price ?? 0);
+                $amount = $batch->sum(fn($order) => optional($order->confirmationPrice)->price ?? 0);
 
-            $invoice = FornissureInvoice::create([
-                'fornissure_id' => $fornissure->id,
-                'reference'     => 'INV-PAY-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
-                'type'          => 'payment',
-                'period_start'  => $start->toDateString(),
-                'period_end'    => $end->toDateString(),
-                'amount'        => $amount,
-                'status'        => 'not_paid',
-            ]);
+                $invoice = FornissureInvoice::create([
+                    'fornissure_id' => $fornissure->id,
+                    'reference'     => 'INV-PAY-' . now()->format('Ymd') . '-' . Str::upper(Str::random(4)),
+                    'type'          => 'payment',
+                    'period_start'  => $batch->first()->created_at->toDateString(),
+                    'period_end'    => $batch->last()->created_at->toDateString(),
+                    'amount'        => $amount,
+                    'status'        => 'not_paid',
+                ]);
 
-            $invoice->orders()->attach($orders->pluck('id'));
-            //notify fornissure
-            Notification::send($fornissure, new InvoiceCreatedNotification($invoice));
-            $this->info("✅ Payment invoice {$invoice->reference} created for fornissure {$fornissure->id} ({$orders->count()} orders, total €{$amount}).");
+                $invoice->orders()->attach($batch->pluck('id'));
+                Notification::send($fornissure, new InvoiceCreatedNotification($invoice));
+                $this->info("✅ Payment invoice {$invoice->reference} created for fornissure {$fornissure->id} ({$batch->count()} orders, total €{$amount}).");
+            });
         }
 
         return 0;
