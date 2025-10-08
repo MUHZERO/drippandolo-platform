@@ -22,7 +22,7 @@ class DashboardService
 
         $orders = Order::whereBetween('created_at', [$start, $end])->get();
         $spend = Spend::whereBetween('created_at', [$start, $end])->sum('amount');
-        $revenue = Revenu::whereBetween('created_at', [$start, $end])->sum('amount');
+        $revenue = Revenu::whereBetween('date', [$start->toDateString(), $end->toDateString()])->sum('amount');
 
         return [
             'revenue' => $revenue,
@@ -53,7 +53,7 @@ class DashboardService
             $day = Carbon::create($year, $month, $i);
             $days[] = $day->format('d');
 
-            $rev = Revenu::whereDate('created_at', $day)->sum('amount');
+            $rev = Revenu::whereDate('date', $day)->sum('amount');
             $sp  = Spend::whereDate('created_at', $day)->sum('amount');
             $or  = Order::whereDate('created_at', $day)->count();
 
@@ -66,4 +66,3 @@ class DashboardService
         return compact('days', 'revenue', 'spend', 'net', 'orders');
     }
 }
-

@@ -64,6 +64,7 @@ return [
         'view'         => 'Vedi',
         'export'       => 'Esporta',
         'import'       => 'Importa',
+        'add_revenue'  => 'Aggiungi entrata',
     ],
 
     'messages' => [

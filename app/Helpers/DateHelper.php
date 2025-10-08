@@ -8,19 +8,33 @@ class DateHelper
 {
     public static function lastWorkingDay(): Carbon
     {
-        $yesterday = now()->subDay();
+        return self::previousWorkingDay(now());
+    }
 
-        // If yesterday is Saturday → use Friday
-        if ($yesterday->isSaturday()) {
-            return $yesterday->subDay();
+    public static function previousWorkingDay(Carbon $date): Carbon
+    {
+        $previous = $date->copy()->subDay();
+
+        while (self::isWeekend($previous)) {
+            $previous->subDay();
         }
 
-        // If yesterday is Sunday → use Friday
-        if ($yesterday->isSunday()) {
-            return $yesterday->subDays(2);
+        return $previous;
+    }
+
+    public static function nextWorkingDay(Carbon $date): Carbon
+    {
+        $next = $date->copy()->addDay();
+
+        while (self::isWeekend($next)) {
+            $next->addDay();
         }
 
-        return $yesterday;
+        return $next;
+    }
+
+    public static function isWeekend(Carbon $date): bool
+    {
+        return $date->isSaturday() || $date->isSunday();
     }
 }
-

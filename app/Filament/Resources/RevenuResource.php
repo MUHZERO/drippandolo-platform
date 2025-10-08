@@ -26,6 +26,18 @@ class RevenuResource extends Resource
         return __('resources.navigation.sales');
     }
 
+    public static function getNavigationBadge(): ?string
+    {
+        $missingDate = Revenu::firstMissingWorkingDay(DateHelper::lastWorkingDay());
+
+        return $missingDate?->toDateString();
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return static::getNavigationBadge() ? 'danger' : null;
+    }
+
     public static function getEloquentQuery(): Builder
     {
         $user = auth()->user();
@@ -48,21 +60,35 @@ class RevenuResource extends Resource
             Forms\Components\DatePicker::make('date')
                 ->label(__('resources.fields.date'))
                 ->required()
-                ->unique(ignorable: fn($record) => $record)
-                ->rules([
-                    fn($get) => function (string $attribute, $value, $fail) {
-                        $day = Carbon::parse($value)->dayOfWeek;
-                        if ($day === 0 || $day === 6) {
-                            $fail(__('resources.messages.weekend_not_allowed'));
+                ->default(function () {
+                    if (! Revenu::query()->exists()) {
+                        $today = Carbon::today();
+
+                        if (DateHelper::isWeekend($today)) {
+                            return DateHelper::previousWorkingDay($today)->toDateString();
                         }
 
-                        $lastWorkingDay = DateHelper::lastWorkingDay()->toDateString();
-                        $missingYesterday = ! Revenu::whereDate('date', $lastWorkingDay)->exists() && Revenu::count() > 0;
+                        return $today->toDateString();
+                    }
 
-                        if ($value == now()->toDateString() && $missingYesterday) {
-                            $fail(__('resources.messages.missing_previous', [
-                                'date' => $lastWorkingDay,
-                            ]));
+                    $referenceDate = DateHelper::lastWorkingDay();
+                    $missingDate = Revenu::firstMissingWorkingDay($referenceDate);
+
+                    if ($missingDate) {
+                        return $missingDate->toDateString();
+                    }
+
+                    return Revenu::nextFillableWorkingDay()->toDateString();
+                })
+                ->unique(ignorable: fn($record) => $record)
+                ->rules([
+                    fn () => function (string $attribute, $value, $fail) {
+                        if (! $value) {
+                            return;
+                        }
+
+                        if (Carbon::parse($value)->isWeekend()) {
+                            $fail(__('resources.messages.weekend_not_allowed'));
                         }
                     }
                 ]),

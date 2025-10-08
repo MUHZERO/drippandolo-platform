@@ -64,6 +64,7 @@ return [
         'view'         => 'View',
         'export'       => 'Export',
         'import'       => 'Import',
+        'add_revenue'  => 'Add revenue',
     ],
 
     'messages' => [

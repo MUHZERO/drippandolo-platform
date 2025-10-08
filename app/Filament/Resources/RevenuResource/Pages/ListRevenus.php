@@ -15,23 +15,31 @@ class ListRevenus extends ListRecords
 
     protected function getHeaderActions(): array
     {
+        $referenceDate = DateHelper::lastWorkingDay();
+        $missingDate = Revenu::firstMissingWorkingDay($referenceDate);
+
+        if ($missingDate) {
+            return [];
+        }
+
         return [
-            Actions\CreateAction::make(),
+            Actions\CreateAction::make()
+                ->label(__('resources.actions.add_revenue'))
+                ->icon('heroicon-o-plus'),
         ];
     }
 
     public function getHeader(): ?View
     {
-        $lastWorkingDay = DateHelper::lastWorkingDay()->toDateString();
-        $missingYesterday = ! Revenu::whereDate('date', $lastWorkingDay)->exists() && Revenu::count() > 0;
+        $referenceDate = DateHelper::lastWorkingDay();
+        $missingDate = Revenu::firstMissingWorkingDay($referenceDate);
 
-        if ($missingYesterday) {
-            return view('filament.components.missing-revenue-alert', [
-                'lastWorkingDay' => $lastWorkingDay,
-            ]);
+        if (! $missingDate) {
+            return parent::getHeader();
         }
 
-        return parent::getHeader();
+        return view('filament.components.missing-revenue-alert', [
+            'missingDate' => $missingDate->toDateString(),
+        ]);
     }
 }
-
